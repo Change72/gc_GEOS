@@ -16,6 +16,7 @@
 #include <geos/index/strtree/SimpleSTRdistance.h>
 #include <geos/index/ItemVisitor.h>
 #include <geos/geom/Envelope.h>
+#include <geos/geom/Envelope3d.h>
 #include <geos/geom/Geometry.h>
 #include <geos/util.h>
 
@@ -43,10 +44,26 @@ SimpleSTRtree::createNode(int newLevel, const geom::Envelope* itemEnv, void* ite
 }
 
 /* private */
+SimpleSTRnode3d*
+SimpleSTRtree::createNode3d(int newLevel, const geom::Envelope3d* itemEnv, void* item)
+{
+    nodesQue3d.emplace_back(newLevel, itemEnv, item, nodeCapacity);
+    SimpleSTRnode3d& node = nodesQue3d.back();
+    return &node;
+}
+
+/* private */
 SimpleSTRnode*
 SimpleSTRtree::createNode(int newLevel)
 {
     return createNode(newLevel, nullptr, nullptr);
+}
+
+/* private */
+SimpleSTRnode3d*
+SimpleSTRtree::createNode3d(int newLevel)
+{
+    return createNode3d(newLevel, nullptr, nullptr);
 }
 
 /* public */
@@ -64,6 +81,16 @@ SimpleSTRtree::insert(const geom::Envelope* itemEnv, void* item)
         return;
     SimpleSTRnode *node = createNode(0, itemEnv, item);
     nodes.push_back(node);
+}
+
+/* public */
+void
+SimpleSTRtree::insert(const geom::Envelope3d* itemEnv, void* item)
+{
+    if (itemEnv->isNull())
+        return;
+    SimpleSTRnode3d *node = createNode3d(0, itemEnv, item);
+    nodes3d.push_back(node);
 }
 
 /* private static */
@@ -93,6 +120,56 @@ SimpleSTRtree::sortNodesX(std::vector<SimpleSTRnode*>& nodeList)
         {
             const geom::Envelope& ea = a->getEnvelope();
             const geom::Envelope& eb = b->getEnvelope();
+            double xa = (ea.getMinX() + ea.getMaxX()) / 2.0;
+            double xb = (eb.getMinX() + eb.getMaxX()) / 2.0;
+            return xa < xb;
+        }
+    } nodeSortByX;
+
+    std::sort(nodeList.begin(), nodeList.end(), nodeSortByX);
+}
+
+/* private static */
+void
+SimpleSTRtree::sortNodesZ3d(std::vector<SimpleSTRnode3d *> &nodeList) {
+    struct {
+        bool operator()(SimpleSTRnode3d *a, SimpleSTRnode3d *b) const {
+            const geom::Envelope3d &ea = a->getEnvelope();
+            const geom::Envelope3d &eb = b->getEnvelope();
+            double za = (ea.getMinZ() + ea.getMaxZ()) / 2.0;
+            double zb = (eb.getMinZ() + eb.getMaxZ()) / 2.0;
+            return za < zb;
+        }
+    } nodeSortByZ;
+
+    std::sort(nodeList.begin(), nodeList.end(), nodeSortByZ);
+}
+
+/* private static */
+void
+SimpleSTRtree::sortNodesY3d(std::vector<SimpleSTRnode3d *> &nodeList) {
+    struct {
+        bool operator()(SimpleSTRnode3d *a, SimpleSTRnode3d *b) const {
+            const geom::Envelope3d &ea = a->getEnvelope();
+            const geom::Envelope3d &eb = b->getEnvelope();
+            double ya = (ea.getMinY() + ea.getMaxY()) / 2.0;
+            double yb = (eb.getMinY() + eb.getMaxY()) / 2.0;
+            return ya < yb;
+        }
+    } nodeSortByY;
+
+    std::sort(nodeList.begin(), nodeList.end(), nodeSortByY);
+}
+
+/* private static */
+void
+SimpleSTRtree::sortNodesX3d(std::vector<SimpleSTRnode3d*>& nodeList)
+{
+    struct {
+        bool operator()(SimpleSTRnode3d* a, SimpleSTRnode3d* b) const
+        {
+            const geom::Envelope3d& ea = a->getEnvelope();
+            const geom::Envelope3d& eb = b->getEnvelope();
             double xa = (ea.getMinX() + ea.getMaxX()) / 2.0;
             double xb = (eb.getMinX() + eb.getMaxX()) / 2.0;
             return xa < xb;
@@ -133,6 +210,37 @@ SimpleSTRtree::createParentNodes(
 }
 
 /* private */
+std::vector<SimpleSTRnode3d*>
+SimpleSTRtree::createParentNodes3d(
+        std::vector<SimpleSTRnode3d*>& childNodes,
+        int newLevel)
+{
+    assert(!childNodes.empty());
+
+    auto minLeafCount = (std::size_t)std::ceil((double)(childNodes.size()) / (double)nodeCapacity);
+    auto sliceCount = (std::size_t)std::ceil(std::pow((double)minLeafCount, 1.0 / 3.0));
+    auto sliceCapacity = (std::size_t)std::ceil((double)(childNodes.size()) / (double)sliceCount);
+    auto verticalSliceCapacity = (std::size_t)std::ceil((double)(sliceCapacity) / (double)sliceCount);
+
+    sortNodesX3d(childNodes);
+
+    std::size_t i = 0;
+    std::size_t nChildren = childNodes.size();
+    std::vector<SimpleSTRnode3d*> parentNodes;
+    std::vector<SimpleSTRnode3d*> verticalSlice(sliceCapacity);
+    for (std::size_t j = 0; j < sliceCount; j++) {
+        verticalSlice.clear();
+        std::size_t nodesAddedToSlice = 0;
+        while(i < nChildren && nodesAddedToSlice < sliceCapacity) {
+            verticalSlice.push_back(childNodes[i++]);
+            ++nodesAddedToSlice;
+        }
+        addParentNodesFromVerticalSlice3d(verticalSlice, newLevel, parentNodes, verticalSliceCapacity);
+    }
+    return parentNodes;
+}
+
+/* private */
 void
 SimpleSTRtree::addParentNodesFromVerticalSlice(
     std::vector<SimpleSTRnode*>& verticalSlice,
@@ -159,6 +267,60 @@ SimpleSTRtree::addParentNodesFromVerticalSlice(
 }
 
 /* private */
+void
+SimpleSTRtree::addParentNodesFromVerticalSlice3d(
+        std::vector<SimpleSTRnode3d*>& verticalSlice,
+        int newLevel,
+        std::vector<SimpleSTRnode3d*>& parentNodes,
+        std::size_t verticalSliceCapacity)
+{
+    sortNodesY3d(verticalSlice);
+
+    auto sliceCount = (std::size_t)std::ceil((double)verticalSlice.size() / (double)verticalSliceCapacity);
+
+    std::vector<SimpleSTRnode3d*> depthSlice(verticalSliceCapacity);
+    std::size_t i = 0;
+    std::size_t nChildren = verticalSlice.size();
+    for (std::size_t j = 0; j < sliceCount; j++) {
+        depthSlice.clear();
+        std::size_t nodesAddedToSlice = 0;
+        while(i < nChildren && nodesAddedToSlice < verticalSliceCapacity) {
+            depthSlice.push_back(verticalSlice[i++]);
+            ++nodesAddedToSlice;
+        }
+        addParentNodesFromDepthSlice3d(depthSlice, newLevel, parentNodes);
+    }
+
+    return;
+}
+
+/* private */
+void
+SimpleSTRtree::addParentNodesFromDepthSlice3d(
+        std::vector<SimpleSTRnode3d*>& depthSlice,
+        int newLevel,
+        std::vector<SimpleSTRnode3d*>& parentNodes)
+{
+    sortNodesY3d(depthSlice);
+
+    SimpleSTRnode3d* parent = nullptr;
+    for (auto* node: depthSlice) {
+        if (!parent) {
+            parent = createNode3d(newLevel);
+        }
+        parent->addChildNode3d(node);
+        if (parent->size() == nodeCapacity) {
+            parentNodes.push_back(parent);
+            parent = nullptr;
+        }
+    }
+    if (parent)
+        parentNodes.push_back(parent);
+
+    return;
+}
+
+/* private */
 std::vector<SimpleSTRnode*>
 SimpleSTRtree::createHigherLevels(
     std::vector<SimpleSTRnode*>& nodesOfALevel, int level)
@@ -169,6 +331,19 @@ SimpleSTRtree::createHigherLevels(
         return parentNodes;
     }
     return createHigherLevels(parentNodes, nextLevel);
+}
+
+/* private */
+std::vector<SimpleSTRnode3d*>
+SimpleSTRtree::createHigherLevels3d(
+        std::vector<SimpleSTRnode3d*>& nodesOfALevel, int level)
+{
+    int nextLevel = level+1;
+    std::vector<SimpleSTRnode3d*> parentNodes = createParentNodes3d(nodesOfALevel, nextLevel);
+    if (parentNodes.size() == 1) {
+        return parentNodes;
+    }
+    return createHigherLevels3d(parentNodes, nextLevel);
 }
 
 /* private */
@@ -184,6 +359,23 @@ SimpleSTRtree::build()
         std::vector<SimpleSTRnode*> nodeTree = createHigherLevels(nodes, 0);
         assert(nodeTree.size()==1);
         root = nodeTree[0];
+    }
+    built = true;
+}
+
+/* private */
+void
+SimpleSTRtree::build3d()
+{
+    if (built) return;
+
+    if (nodes3d.empty()) {
+        root3d = nullptr;
+    }
+    else {
+        std::vector<SimpleSTRnode3d*> nodeTree = createHigherLevels3d(nodes3d, 0);
+        assert(nodeTree.size()==1);
+        root3d = nodeTree[0];
     }
     built = true;
 }

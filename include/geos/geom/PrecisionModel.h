@@ -194,6 +194,18 @@ public:
         coord.y = makePrecise(coord.y);
     };
 
+    void makePrecise(Coordinate& coord) const
+    {
+        // optimization for full precision
+        if(modelType == FLOATING) {
+            return;
+        }
+
+        coord.x = makePrecise(coord.x);
+        coord.y = makePrecise(coord.y);
+        coord.z = makePrecise(coord.z);
+    };
+
     void makePrecise(CoordinateXY* coord) const
     {
         assert(coord);

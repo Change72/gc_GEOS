@@ -17,8 +17,9 @@
 #include <geos/export.h>
 #include <geos/index/SpatialIndex.h> // for inheritance
 #include <geos/geom/Envelope.h>
+#include <geos/geom/Envelope3d.h>
 #include <geos/index/strtree/SimpleSTRnode.h>
-
+#include <geos/index/strtree/SimpleSTRnode3d.h>
 #include <vector>
 #include <utility>
 
@@ -70,6 +71,8 @@ private:
     /* Members */
     std::deque<SimpleSTRnode> nodesQue;
     std::vector<SimpleSTRnode*> nodes;
+    std::deque<SimpleSTRnode3d> nodesQue3d;
+    std::vector<SimpleSTRnode3d*> nodes3d;
     std::size_t nodeCapacity;
     bool built;
 
@@ -78,13 +81,20 @@ private:
     * return reference to node.
     */
     SimpleSTRnode* createNode(int newLevel, const geom::Envelope* itemEnv, void* item);
+    SimpleSTRnode3d* createNode3d(int newLevel, const geom::Envelope3d* itemEnv, void* item);
     SimpleSTRnode* createNode(int newLevel);
+    SimpleSTRnode3d* createNode3d(int newLevel);
 
 
     void build();
+    void build3d();
 
     static void sortNodesY(std::vector<SimpleSTRnode*>& nodeList);
     static void sortNodesX(std::vector<SimpleSTRnode*>& nodeList);
+
+    static void sortNodesZ3d(std::vector<SimpleSTRnode3d*>& nodeList);
+    static void sortNodesY3d(std::vector<SimpleSTRnode3d*>& nodeList);
+    static void sortNodesX3d(std::vector<SimpleSTRnode3d*>& nodeList);
 
     void query(const geom::Envelope* searchEnv, const SimpleSTRnode* node, ItemVisitor& visitor);
     void query(const geom::Envelope* searchEnv, const SimpleSTRnode* node, std::vector<void*>& matches);
@@ -95,15 +105,32 @@ private:
 
     std::vector<SimpleSTRnode*> createHigherLevels(
         std::vector<SimpleSTRnode*>& nodesOfALevel, int level);
+    std::vector<SimpleSTRnode3d*> createHigherLevels3d(
+            std::vector<SimpleSTRnode3d*>& nodesOfALevel, int level);
 
     void addParentNodesFromVerticalSlice(
         std::vector<SimpleSTRnode*>& verticalSlice,
         int newLevel,
         std::vector<SimpleSTRnode*>& parentNodes);
 
+    void addParentNodesFromVerticalSlice3d(
+            std::vector<SimpleSTRnode3d*>& verticalSlice,
+            int newLevel,
+            std::vector<SimpleSTRnode3d*>& parentNodes,
+            std::size_t verticalSliceCapacity);
+
+    void addParentNodesFromDepthSlice3d(
+            std::vector<SimpleSTRnode3d*>& depthSlice,
+            int newLevel,
+            std::vector<SimpleSTRnode3d*>& parentNodes);
+
     std::vector<SimpleSTRnode*> createParentNodes(
         std::vector<SimpleSTRnode*>& childNodes,
         int newLevel);
+
+    std::vector<SimpleSTRnode3d*> createParentNodes3d(
+            std::vector<SimpleSTRnode3d*>& childNodes,
+            int newLevel);
 
     bool remove(const geom::Envelope* searchBounds, SimpleSTRnode* node, void* item);
 
@@ -112,7 +139,7 @@ public:
 
     /* Member */
     SimpleSTRnode* root;
-
+    SimpleSTRnode3d* root3d;
     /**
      * Constructs an STRtree with the given maximum number of child nodes that
      * a node may have
@@ -145,9 +172,16 @@ public:
         return root;
     }
 
+    SimpleSTRnode3d* getRoot3d() {
+        build3d();
+        return root3d;
+    }
+
     void insert(geom::Geometry* geom);
 
     void insert(const geom::Envelope* itemEnv, void* item) override;
+
+    void insert(const geom::Envelope3d* itemEnv, void* item);
 
     void iterate(ItemVisitor& visitor);
 

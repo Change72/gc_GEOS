@@ -7,8 +7,35 @@
 #include <geos/index/strtree/GeometryItemDistance.h>
 #include <geos/index/ItemVisitor.h>
 #include <geos/io/WKTReader.h>
-
+#include <geos/geom/Envelope3d.h>
 #include <iostream>
+#include <ctime>
+#include <iostream>
+#include <thread>
+#include <chrono>
+#include <string.h>
+
+#ifdef WIN32
+#include <windows.h>
+#include <psapi.h>
+//#include <tlhelp32.h>
+#include <direct.h>
+#include <process.h>
+#else
+#include <sys/stat.h>
+//#include <sys/sysinfo.h>
+#include <sys/time.h>
+#include <unistd.h>
+#endif
+
+// get current process pid
+inline int GetCurrentPid()
+{
+    return getpid();
+}
+
+#define VMRSS_LINE 22
+
 
 using namespace geos;
 
@@ -154,6 +181,108 @@ void object::test<3>
 }
 
 
+// get specific process physical memeory occupation size by pid (MB)
+inline float GetMemoryUsage(int pid)
+{
+#ifdef WIN32
+    uint64_t mem = 0, vmem = 0;
+PROCESS_MEMORY_COUNTERS pmc;
+
+// get process hanlde by pid
+HANDLE process = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
+if (GetProcessMemoryInfo(process, &pmc, sizeof(pmc)))
+{
+    mem = pmc.WorkingSetSize;
+    vmem = pmc.PagefileUsage;
+}
+CloseHandle(process);
+
+// use GetCurrentProcess() can get current process and no need to close handle
+
+// convert mem from B to MB
+return mem / 1024.0 / 1024.0;
+
+#else
+    char file_name[64] = { 0 };
+    FILE* fd;
+    char line_buff[512] = { 0 };
+    sprintf(file_name, "/proc/%d/status", pid);
+
+    fd = fopen(file_name, "r");
+    if (nullptr == fd)
+        return 0;
+
+    char name[64];
+    int vmrss = 0;
+    for (int i = 0; i < VMRSS_LINE - 1; i++)
+        fgets(line_buff, sizeof(line_buff), fd);
+
+    fgets(line_buff, sizeof(line_buff), fd);
+    sscanf(line_buff, "%s %d", name, &vmrss);
+    fclose(fd);
+
+    // cnvert VmRSS from KB to MB
+    return float(vmrss / 1024.0);
+#endif
+}
+
+
+template<>
+template<>
+void object::test<4>
+        () {
+
+    for (int i = 0; i < 5; i++)
+        std::thread([]
+                    {
+                        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                    }).detach();
+
+    int current_pid = GetCurrentPid(); // or you can set a outside program pid
+//    float cpu_usage_ratio = GetCpuUsageRatio(current_pid);
+    float memory_usage = GetMemoryUsage(current_pid);
+
+    while (true)
+    {
+        std::cout << "current pid: " << current_pid << std::endl;
+//        std::cout << "cpu usage ratio: " << cpu_usage_ratio * 100 << "%" << std::endl;
+        std::cout << "memory usage: " << memory_usage << "MB" << std::endl;
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    }
+
+
+    clock_t start = clock();
+
+    index::strtree::SimpleSTRtree t(10);
+    std::vector<std::unique_ptr<geom::Geometry>> geoms;
+    const int gridSize = 100;
+    const int gap = 10;
+    auto gf = geom::GeometryFactory::create();
+    /*
+    for (int i = 0; i < gridSize; ++i) {
+        for (int j = 0; j < gridSize; ++j) {
+            geos::geom::Envelope e(i, i + 1, j, j + 1);
+            const auto ep = &e;
+            t.insert(ep, static_cast<void*>(&e));
+        }
+    }
+    */
+
+    for (int i = 0; i < gridSize; ++i) {
+        for (int j = 0; j < gridSize; ++j) {
+            for (int k= 0; k < gridSize; ++k) {
+                    geos::geom::Envelope3d e(i, i + gap, j, j + gap, k, k + gap);
+                    const auto ep = &e;
+                    t.insert(ep, static_cast<void*>(&e));
+            }
+        }
+    }
+
+    t.getRoot3d();
+    clock_t end = clock();
+    std::cout<<"Run time: "<<(double)(end - start) / CLOCKS_PER_SEC<<"S"<<std::endl;
+}
 
 } // namespace tut
 

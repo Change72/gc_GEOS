@@ -23,7 +23,7 @@ target_include_directories(test_geos_unit
 file(GLOB_RECURSE _testfiles ${CMAKE_CURRENT_LIST_DIR}/**/*Test.cpp CONFIGURE_DEPEND)
 foreach(_testfile ${_testfiles})
     string(REPLACE ${CMAKE_CURRENT_LIST_DIR}/ "" _testname ${_testfile})
-    string(REPLACE "Test.cpp" "" _testname ${_testname})
+    string(REPLACE "../../test.cpp" "" _testname ${_testname})
     string(REPLACE "/" "-" _cmake_testname  ${_testname})
     string(REPLACE "/" "::" _testname ${_testname})
     if (NOT ${_testname} MATCHES "^capi::")
