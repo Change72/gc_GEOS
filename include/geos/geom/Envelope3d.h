@@ -73,6 +73,7 @@ public:
         , maxy(DoubleNotANumber)
         , minz(DoubleNotANumber)
         , maxz(DoubleNotANumber)
+        , slice_id_(-1)
         {};
 
     /** \brief
@@ -85,9 +86,9 @@ public:
      * @param  z1  the first y-value
      * @param  z2  the second y-value
      */
-    Envelope3d(double x1, double x2, double y1, double y2, double z1, double z2)
+    Envelope3d(double x1, double x2, double y1, double y2, double z1, double z2, int slice_id = -1)
     {
-        init(x1, x2, y1, y2, z1, z2);
+        init(x1, x2, y1, y2, z1, z2, slice_id);
     }
 
     /** \brief
@@ -205,7 +206,7 @@ public:
      * @param  z1  the first y-value
      * @param  z2  the second y-value
      */
-    void init(double x1, double x2, double y1, double y2, double z1, double z2)
+    void init(double x1, double x2, double y1, double y2, double z1, double z2, int slice_id = -1)
     {
         if(x1 < x2) {
             minx = x1;
@@ -231,6 +232,7 @@ public:
             minz = z2;
             maxz = z1;
         }
+        slice_id_ = slice_id;
     };
 
     /** \brief
@@ -261,6 +263,7 @@ public:
     void setToNull()
     {
         minx = maxx = miny = maxy = minz = maxz = DoubleNotANumber;
+        slice_id_ = -1;
     };
 
     /** \brief
@@ -272,7 +275,7 @@ public:
     bool isNull(void) const
     {
         return std::isnan(maxx) && std::isnan(maxy) && std::isnan(maxz) &&
-               std::isnan(minx) && std::isnan(miny) && std::isnan(minz);
+               std::isnan(minx) && std::isnan(miny) && std::isnan(minz) && slice_id_ == -1;
     };
 
     /** \brief
@@ -959,6 +962,18 @@ public:
     GEOS_DLL friend bool
     operator< (const Envelope3d& a, const Envelope3d& b);
 
+    // get the slice_id
+    int getSliceId() const
+    {
+        return slice_id_;
+    }
+
+    // set the slice_id
+    void setSliceId(int id)
+    {
+        slice_id_ = id;
+    }
+
 private:
 
     /** \brief
@@ -1007,6 +1022,9 @@ private:
 
     /// the maximum z-coordinate
     double maxz;
+
+    /// slice id for each block
+    int slice_id_;
 };
 
 

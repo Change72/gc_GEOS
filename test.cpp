@@ -45,6 +45,377 @@ inline int GetCurrentPid()
 // the info line num in /proc/{pid}/status file
 
 
+
+/*
+
+        index::strtree::SimpleSTRtree t(10);
+        std::vector<std::unique_ptr<geom::Geometry>> geoms;
+        const int gridSize = 10;
+
+        auto gf = geom::GeometryFactory::create();
+        for (int i = 0; i < gridSize; ++i) {
+            for (int j = 0; j < gridSize; ++j) {
+                geom::Coordinate c((double) i, (double) j);
+                geom::Point *pt = gf->createPoint(c);
+                geoms.emplace_back(pt);
+                t.insert(pt);
+            }
+        }
+
+        geom::Envelope qe(-0.5, 1.5, -0.5, 1.5);
+        std::vector<void *> matches;
+        t.query(&qe, matches);
+        // std::cout << matches.size() << std::endl;
+        ensure(matches.size() == 4);
+
+        // std::cout << t << std::endl;
+
+        class SimpleTestVisitor : public index::ItemVisitor {
+        public:
+            std::size_t count;
+
+            SimpleTestVisitor()
+                    : count(0) {}
+
+            void
+            visitItem(void *item) override {
+                geom::Point *pt = static_cast<geom::Point *>(item);
+                if (!pt->isEmpty())
+                    count++;
+                // std::cout << pt << std::endl;
+            }
+        };
+
+        SimpleTestVisitor vis;
+        t.query(&qe, vis);
+        ensure(vis.count == 4);
+
+
+        Tree serializeList;
+        serialize(secondLevelBlockTree.root3d, serializeList);
+//        std::ofstream output("tree.idx", std::ios::out | std::ios::binary);
+//        serializeList.SerializeToOstream(&output);
+//        output.close();
+        std::string binary_data;
+        serializeList.SerializeToString(&binary_data);
+
+        end = clock();
+        std::cout << "Serializing R-Tree time: " << (double) (end - start) / CLOCKS_PER_SEC << "S" << std::endl;
+
+        // Write a key-value pair to the database
+
+        rocksdb::Status status = batch.Put(key, binary_data);
+        std::cout << "write status: " << status.ok() << std::endl;
+
+
+
+
+        const int gridSize = 10;
+        index::strtree::SimpleSTRtree t1(10);
+        index::strtree::SimpleSTRtree t2(10);
+        std::vector<std::unique_ptr<geom::Geometry>> geoms;
+
+        auto gf = geom::GeometryFactory::create();
+        for (int i = 0; i < gridSize; ++i) {
+            for (int j = 0; j < gridSize; ++j) {
+                geom::Coordinate c1((double) i, (double) j);
+                geom::Coordinate c2((double) (i + gridSize + 1), (double) (j + gridSize + 1));
+                geom::Point *pt1 = gf->createPoint(c1);
+                geom::Point *pt2 = gf->createPoint(c2);
+                geoms.emplace_back(pt1);
+                geoms.emplace_back(pt2);
+                t1.insert(pt1);
+                t2.insert(pt2);
+            }
+        }
+
+        std::pair<const void *, const void *> rslt;
+        index::strtree::GeometryItemDistance gi;
+        rslt = t1.nearestNeighbour(t2, &gi);
+
+        const geom::Point *g1 = static_cast<const geom::Point *>(rslt.first);
+        const geom::Point *g2 = static_cast<const geom::Point *>(rslt.second);
+
+        // std::cout << *g1 << std::endl;
+        // std::cout << *g2 << std::endl;
+
+        ensure_equals(g1->getX(), 9.0);
+        ensure_equals(g1->getY(), 9.0);
+        ensure_equals(g2->getX(), 11.0);
+        ensure_equals(g2->getY(), 11.0);
+
+
+
+
+
+
+
+
+
+
+
+
+void read(){
+    // Read the value for the key
+    std::string read_value;
+    status = db->Get(rocksdb::ReadOptions(), key, &read_value);
+    std::cout << "read status: " << status.ok() << std::endl;
+    std::cout << "origin value: " << binary_data << "\tread value: " << read_value << std::endl;
+
+    std::cout << "Start deSerialize R-Tree " << std::endl;
+    start = clock();
+
+//        std::ifstream input_file("tree.idx", std::ios::in | std::ios::binary);
+
+    // Check if the file was opened successfully
+//        if (!input_file) {
+//            std::cerr << "Failed to open file." << std::endl;
+//        }
+
+    Tree readSerializeList;
+//        if (!readSerializeList.ParseFromIstream(&input_file)) {
+    if (!readSerializeList.ParseFromString(binary_data)) {
+        std::cerr << "Failed to parse file." << std::endl;
+    }
+    geos::index::strtree::SimpleSTRnode3d *root_node = nullptr;
+    int seq = 0;
+    deSerialize(root_node, &readSerializeList, seq);
+
+//    for (int i = 0; i < readSerializeList.treenodes_size(); i++) {
+//        const TreeNode& node = readSerializeList.treenodes(i);
+//        // Process the node.
+//        std::cout << "Field value" << std::endl;
+//    }
+
+    // Close the file
+//        input_file.close();
+
+    end = clock();
+    std::cout << "de-serializing R-Tree time: " << (double) (end - start) / CLOCKS_PER_SEC << "S" << std::endl;
+
+    std::cout << "Debug break point here" << std::endl;
+}
+
+
+ //        const std::map<std::string, adios2::Params> variables = bpIO.AvailableVariables(true);
+        const std::map<std::string, adios2::Params> variables = bpIO.AvailableVariables();
+
+
+
+        try {
+
+            std::cout << "List of variables:";
+            for (const auto &variablePair : variables)
+            {
+                std::cout << "  " << variablePair.first << "\n";
+
+                for (const auto &parameter : variablePair.second)
+                {
+                    std::cout << "\t" << parameter.first << ": " << parameter.second
+                              << "\n";
+                }
+            }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//            std::cout << "Double vector inside " << filename << ": {" << "\n";
+//            std::cout << "Size: " << myDouble.size() << ": {" << "\n";
+//            for (auto &x : myDouble)
+//            {
+//                std::cout << x << ", ";
+//            }
+//            std::cout << "}\n";
+
+
+//    buildSTRtree((int)100, 100);
+//    std::cout << "Protocol Buffers version: " << GOOGLE_PROTOBUF_VERSION << std::endl;
+
+//            adios2::Variable<double> x_100_position =
+//                    bpIO.InquireVariable<double>("/data/100/particles/electrons/momentum/x");
+//            auto charsBlocksInfo = bpReader.AllStepsBlocksInfo(x_100_position);
+//            if (x_100_position)
+//            {
+//                // Iterate over the map and print its contents
+//                for (const auto& map_pair : charsBlocksInfo) {
+//                    std::cout << "Map key: " << map_pair.first << std::endl;
+//
+//                    const auto& var_vec = map_pair.second;
+//
+//                    for (const auto& var_info : var_vec) {
+//                        for (size_t i = 0; i < var_info.Start.size(); i++){
+//                            std::cout << "Variable Start: " << var_info.Start[i] << "\tVariable Count: " << var_info.Count[i] << std::endl;
+//
+//                        }
+//                        x_100_position.SetSelection({var_info.Start, var_info.Count});
+//                        std::cout << "Variable Min: " << var_info.Min << std::endl;
+//                        std::cout << "Variable Max: " << var_info.Max << std::endl;
+//
+//                        std::vector<double> myDouble;
+//                        bpReader.Get<double>(x_100_position, myDouble, adios2::Mode::Sync);
+//                        std::cout << "Double vector inside " << filename << ": {" << "\n";
+//                        std::cout << "Size: " << myDouble.size() << ": {" << "\n";
+//                        //            for (auto &x : myDouble)
+//                        //            {
+//                        //                std::cout << x << ", ";
+//                        //            }
+//                        std::cout << "}\n";
+//
+//
+//                    }
+//                }
+
+//            if (y_100_position) {
+//                std::vector<double> myDouble;
+//                bpReader.Get<double>(y_100_position, myDouble, adios2::Mode::Sync);
+//                std::cout << "Double vector inside " << filename << ": {" << "\n";
+//                std::cout << "Size: " << myDouble.size() << ": {" << "\n";
+//                //            for (auto &x : myDouble)
+//                //            {
+//                //                std::cout << x << ", ";
+//                //            }
+//                std::cout << "}\n";
+//            }
+
+
+
+//        adios2::Variable<double> z_100_position =
+//                bpIO.InquireVariable<double>("/data/100/particles/electrons/momentum/z");
+
+//            if (z_100_position) {
+//                std::vector<double> myDouble;
+//                bpReader.Get<double>(z_100_position, myDouble, adios2::Mode::Sync);
+//                std::cout << "Double vector inside " << filename << ": {" << "\n";
+//                std::cout << "Size: " << myDouble.size() << ": {" << "\n";
+//                //            for (auto &x : myDouble)
+//                //            {
+//                //                std::cout << x << ", ";
+//                //            }
+//                std::cout << "}\n";
+//            }
+//
+//            adios2::Variable<float> bpFloats =
+//                    bpIO.InquireVariable<float>("bpFloats");
+//
+//            adios2::Variable<int> bpInts = bpIO.InquireVariable<int>("bpInts");
+//
+//            if (bpFloats) {
+//                std::vector<float> myFloats;
+//                bpReader.Get<float>(bpFloats, myFloats, adios2::Mode::Sync);
+//                std::cout << "Float vector inside " << filename << ": {";
+//                for (auto &x: myFloats) {
+//                    std::cout << x << ", ";
+//                }
+//                std::cout << "}\n";
+//            }
+//
+//            if (bpInts) {
+//                std::vector<int> myInts;
+//                bpReader.Get<int>(bpInts, myInts, adios2::Mode::Sync);
+//                std::cout << "Int vector inside " << filename << ": {";
+//                for (auto &x: myInts) {
+//                    std::cout << x << ", ";
+//                }
+//                std::cout << "}\n";
+//            } else {
+//                std::cout << "There are no integer datasets in " << filename
+//                          << ".\n";
+//            }
+
+
+ //    buildSTRtree((int)100, 100);
+
+//    for (int i = 0; i < 5; i++)
+//        buildSTRtree((int)pow(10, i+1), 10*(i+1));
+//        std::thread t(buildSTRtree).join();
+//    std::thread t1(buildSTRtree);
+//    std::thread t2(buildSTRtree);
+//    std::thread t3(buildSTRtree);
+//    std::thread t4(buildSTRtree);
+//    std::thread t5(buildSTRtree);
+//    std::thread t6(buildSTRtree);
+//    std::thread t7(buildSTRtree);
+//    std::thread t8(buildSTRtree);
+//    std::thread t5(buildSTRtree);
+//
+//    t1.join();
+//    t2.join();
+//    t3.join();
+//    t4.join();
+//    t5.join();
+//    t6.join();
+//    t7.join();
+//    t8.join();
+//    t5.join();
+
+//    int current_pid = GetCurrentPid(); // or you can set a outside program pid
+//    float cpu_usage_ratio = GetCpuUsageRatio(current_pid);
+//    float memory_usage = GetMemoryUsage(current_pid);
+
+//    while (true)
+//    {
+//    std::cout << "current pid: " << current_pid << std::endl;
+//        std::cout << "cpu usage ratio: " << cpu_usage_ratio * 100 << "%" << std::endl;
+//    std::cout << "memory usage: " << memory_usage << "MB" << std::endl;
+
+//        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+//    }
+
+
+
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 //static const char* get_items(const char* buffer, unsigned int item)
 //{
 //    // read from buffer by offset
