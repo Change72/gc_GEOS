@@ -301,7 +301,7 @@ SimpleSTRtree::addParentNodesFromDepthSlice3d(
         int newLevel,
         std::vector<SimpleSTRnode3d*>& parentNodes)
 {
-    sortNodesY3d(depthSlice);
+    sortNodesZ3d(depthSlice);
 
     SimpleSTRnode3d* parent = nullptr;
     for (auto* node: depthSlice) {

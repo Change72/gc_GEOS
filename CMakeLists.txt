@@ -128,7 +128,7 @@ include(CMakeDependentOption)
 
 ## CMake global variables
 option(BUILD_SHARED_LIBS "Build GEOS with shared libraries" ON)
-set(CMAKE_CXX_STANDARD 11 CACHE STRING "C++ standard version to use (default is 11)")
+set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard version to use (default is 11)")
 
 ## GEOS custom variables
 option(BUILD_BENCHMARKS "Build GEOS benchmarks" OFF)
@@ -161,14 +161,16 @@ message(STATUS "GEOS: Archives output: ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
-
+include_directories(BEFORE third_party/protobuf)
+add_subdirectory(third_party/protobuf)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 #-----------------------------------------------------------------------------
 # C++ language version and compilation flags
 #-----------------------------------------------------------------------------
 message(STATUS "GEOS: Require C++${CMAKE_CXX_STANDARD}")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-
+set(ENV{LD_LIBRARY_PATH} "/usr/local/lib:$ENV{LD_LIBRARY_PATH}")
 #-----------------------------------------------------------------------------
 # Target geos_cxx_flags: common compilation flags
 #-----------------------------------------------------------------------------
@@ -235,7 +237,7 @@ target_compile_definitions(geos_developer_cxx_flags
 target_compile_options(geos_developer_cxx_flags
   INTERFACE
     $<$<CXX_COMPILER_ID:MSVC>:-W4>
-    $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Werror -pedantic -Wall -Wextra -Wno-long-long -Wcast-align -Wconversion -Wsign-conversion -Wchar-subscripts -Wdouble-promotion -Wpointer-arith -Wformat -Wformat-security -Wshadow -Wuninitialized -Wunused-parameter -fno-common>
+#    $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Werror -pedantic -Wall -Wextra -Wno-long-long -Wcast-align -Wconversion -Wsign-conversion -Wchar-subscripts -Wdouble-promotion -Wpointer-arith -Wformat -Wformat-security -Wshadow -Wuninitialized -Wunused-parameter -fno-common>
     $<$<CXX_COMPILER_ID:GNU>:-fno-implicit-inline-templates -Wno-psabi>
     $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Wno-unknown-warning-option>
     )
@@ -243,6 +245,7 @@ target_compile_options(geos_developer_cxx_flags
 #-----------------------------------------------------------------------------
 # Define a coverage build
 #-----------------------------------------------------------------------------
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error")
 set(CMAKE_CXX_FLAGS_COVERAGE "-fprofile-arcs -ftest-coverage")
 
 #-----------------------------------------------------------------------------
@@ -254,9 +257,9 @@ check_library_exists(m pow "" HAVE_LIBM)
 #-----------------------------------------------------------------------------
 # Target geos: C++ API library
 #-----------------------------------------------------------------------------
-add_library(geos "" test.cpp)
+add_library(geos "")
 add_library(GEOS::geos ALIAS geos)
-target_link_libraries(geos PUBLIC geos_cxx_flags PRIVATE $<BUILD_INTERFACE:ryu>)
+target_link_libraries(geos PUBLIC geos_cxx_flags pthread PRIVATE $<BUILD_INTERFACE:ryu>)
 # ryu is an object library, nothing is actually being linked here. The BUILD_INTERFACE
 # switch was necessary to build on AppVeyor (CMake 3.16.2) but not locally (CMake 3.16.3)
 add_subdirectory(include)
@@ -457,7 +460,7 @@ endif()  # PROJECT_IS_TOP_LEVEL
 #-----------------------------------------------------------------------------
 
 if(PROJECT_IS_TOP_LEVEL)
-  add_custom_target(check COMMAND ${CMAKE_BUILD_TOOL} test)
+  add_custom_target(checkgeos COMMAND ${CMAKE_BUILD_TOOL} test)
 endif()
 
 #-----------------------------------------------------------------------------

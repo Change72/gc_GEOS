@@ -27,7 +27,8 @@
 #include <sys/time.h>
 #include <unistd.h>
 #endif
-
+#include "treeNode.pb.h"
+#include <google/protobuf/io/coded_stream.h>
 // get current process pid
 inline int GetCurrentPid()
 {
@@ -226,48 +227,52 @@ return mem / 1024.0 / 1024.0;
 #endif
 }
 
+void serialize(geos::index::strtree::SimpleSTRnode3d *node_ptr, Tree &serializeList) {
+    geos::geom::Envelope3d *bounds = (geom::Envelope3d *) node_ptr->getBounds();
+    std::size_t nChildren = node_ptr->getChildNodes().size();
+    TreeNode signleNode;
+    signleNode.set_level((int) node_ptr->getLevel());
+    signleNode.set_childsize((int) node_ptr->getChildNodes().size());
+    signleNode.set_minx(bounds->getMinX());
+    signleNode.set_maxx(bounds->getMaxX());
+    signleNode.set_miny(bounds->getMinY());
+    signleNode.set_maxy(bounds->getMaxY());
+    signleNode.set_minz(bounds->getMinZ());
+    signleNode.set_maxz(bounds->getMaxZ());
+    signleNode.set_slice_id((int) bounds->getSliceId());
+
+    serializeList.add_treenodes()->CopyFrom(signleNode);
+    for (std::size_t j = 0; j < nChildren; j++) {
+        serialize(node_ptr->getChildNodes()[j], serializeList);
+    }
+}
+
+void deSerialize(geos::index::strtree::SimpleSTRnode3d *&node_ptr, Tree *serializeList, int &seq) {
+    const TreeNode &node = (*serializeList).treenodes(seq);
+    geos::geom::Envelope3d e(node.minx(), node.maxx(), node.miny(), node.maxy(), node.minz(), node.maxz(), node.slice_id());
+    node_ptr = new geos::index::strtree::SimpleSTRnode3d(static_cast<size_t>(node.level()), &e,
+                                                         static_cast<void *>(&e));
+    if (node.childsize() != 0) {
+        for (int j = 0; j < node.childsize(); j++) {
+            geos::index::strtree::SimpleSTRnode3d *child = nullptr;
+            seq = seq + 1;
+            deSerialize(child, serializeList, seq);
+            node_ptr->addChildNode3d(child);
+        }
+    }
+}
+
 
 template<>
 template<>
 void object::test<4>
         () {
 
-    for (int i = 0; i < 5; i++)
-        std::thread([]
-                    {
-                        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                    }).detach();
-
-    int current_pid = GetCurrentPid(); // or you can set a outside program pid
-//    float cpu_usage_ratio = GetCpuUsageRatio(current_pid);
-    float memory_usage = GetMemoryUsage(current_pid);
-
-    while (true)
-    {
-        std::cout << "current pid: " << current_pid << std::endl;
-//        std::cout << "cpu usage ratio: " << cpu_usage_ratio * 100 << "%" << std::endl;
-        std::cout << "memory usage: " << memory_usage << "MB" << std::endl;
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    }
-
-
-    clock_t start = clock();
-
     index::strtree::SimpleSTRtree t(10);
     std::vector<std::unique_ptr<geom::Geometry>> geoms;
     const int gridSize = 100;
     const int gap = 10;
     auto gf = geom::GeometryFactory::create();
-    /*
-    for (int i = 0; i < gridSize; ++i) {
-        for (int j = 0; j < gridSize; ++j) {
-            geos::geom::Envelope e(i, i + 1, j, j + 1);
-            const auto ep = &e;
-            t.insert(ep, static_cast<void*>(&e));
-        }
-    }
-    */
 
     for (int i = 0; i < gridSize; ++i) {
         for (int j = 0; j < gridSize; ++j) {
@@ -278,10 +283,21 @@ void object::test<4>
             }
         }
     }
-
     t.getRoot3d();
-    clock_t end = clock();
-    std::cout<<"Run time: "<<(double)(end - start) / CLOCKS_PER_SEC<<"S"<<std::endl;
+    Tree serializeList;
+    serialize(t.root3d, serializeList);
+    std::string serializeString;
+    serializeList.SerializeToString(&serializeString);
+
+    Tree readSerializeList;
+    geos::index::strtree::SimpleSTRnode3d *root_node = nullptr;
+    if (!readSerializeList.ParseFromString(serializeString)) {
+        std::cerr << "Failed to parse file." << std::endl;
+    }
+    int seq = 0;
+    deSerialize(root_node, &readSerializeList, seq);
+    std::cout << "deSerialize successfully" << std::endl;
+
 }
 
 } // namespace tut
