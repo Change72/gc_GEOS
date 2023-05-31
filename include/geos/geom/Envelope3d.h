@@ -23,6 +23,7 @@
 #include <geos/geom/Coordinate3d.h>
 
 #include <string>
+#include <utility>
 #include <vector>
 #include <ostream> // for operator<<
 #include <memory>
@@ -73,7 +74,8 @@ public:
         , maxy(DoubleNotANumber)
         , minz(DoubleNotANumber)
         , maxz(DoubleNotANumber)
-        , slice_id_(-1)
+        , start_(-1)
+        , end_(-1)
         {};
 
     /** \brief
@@ -86,9 +88,9 @@ public:
      * @param  z1  the first y-value
      * @param  z2  the second y-value
      */
-    Envelope3d(double x1, double x2, double y1, double y2, double z1, double z2, int slice_id = -1)
+    Envelope3d(double x1, double x2, double y1, double y2, double z1, double z2, int start = -1, int end = -1, std::string bloom_filter = "")
     {
-        init(x1, x2, y1, y2, z1, z2, slice_id);
+        init(x1, x2, y1, y2, z1, z2, start, end, std::move(bloom_filter));
     }
 
     /** \brief
@@ -206,7 +208,7 @@ public:
      * @param  z1  the first y-value
      * @param  z2  the second y-value
      */
-    void init(double x1, double x2, double y1, double y2, double z1, double z2, int slice_id = -1)
+    void init(double x1, double x2, double y1, double y2, double z1, double z2, int start = -1, int end = -1, std::string bloom_filter = "")
     {
         if(x1 < x2) {
             minx = x1;
@@ -232,7 +234,10 @@ public:
             minz = z2;
             maxz = z1;
         }
-        slice_id_ = slice_id;
+
+        start_ = start;
+        end_ = end;
+        bloom_filter_ = bloom_filter;
     };
 
     /** \brief
@@ -263,7 +268,9 @@ public:
     void setToNull()
     {
         minx = maxx = miny = maxy = minz = maxz = DoubleNotANumber;
-        slice_id_ = -1;
+        start_ = -1;
+        end_ = -1;
+        bloom_filter_ = "";
     };
 
     /** \brief
@@ -275,7 +282,8 @@ public:
     bool isNull(void) const
     {
         return std::isnan(maxx) && std::isnan(maxy) && std::isnan(maxz) &&
-               std::isnan(minx) && std::isnan(miny) && std::isnan(minz) && slice_id_ == -1;
+               std::isnan(minx) && std::isnan(miny) && std::isnan(minz) &&
+               start_ == -1 && end_ == -1 && bloom_filter_.empty();
     };
 
     /** \brief
@@ -962,17 +970,42 @@ public:
     GEOS_DLL friend bool
     operator< (const Envelope3d& a, const Envelope3d& b);
 
-    // get the slice_id
-    int getSliceId() const
+    // get the start_
+    int getStart() const
     {
-        return slice_id_;
+        return start_;
     }
 
-    // set the slice_id
-    void setSliceId(int id)
+    // set the start_
+    void setStart(int start)
     {
-        slice_id_ = id;
+        start_ = start;
     }
+
+    // get the end_
+    int getEnd() const
+    {
+        return end_;
+    }
+
+    // set the end_
+    void setEnd(int end)
+    {
+        end_ = end;
+    }
+
+    // get the bloom_filter_
+    std::string getBloomFilter() const
+    {
+        return bloom_filter_;
+    }
+
+    // set the bloom_filter_
+    void setBloomFilter(std::string bloom_filter)
+    {
+        bloom_filter_ = std::move(bloom_filter);
+    }
+
 
 private:
 
@@ -1023,8 +1056,14 @@ private:
     /// the maximum z-coordinate
     double maxz;
 
-    /// slice id for each block
-    int slice_id_;
+    /// the start
+    int start_;
+
+    /// the end
+    int end_;
+
+    /// bloom filter
+    std::string bloom_filter_;
 };
 
 
