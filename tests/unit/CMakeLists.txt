@@ -15,7 +15,7 @@ unset(_sources)
 
 find_package(Threads)
 
-target_link_libraries(test_geos_unit PRIVATE geos geos_c Threads::Threads protobuf::libprotobuf)
+target_link_libraries(test_geos_unit PRIVATE geos geos_c Threads::Threads)
 target_include_directories(test_geos_unit
   PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>)

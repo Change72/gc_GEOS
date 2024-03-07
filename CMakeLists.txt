@@ -161,8 +161,6 @@ message(STATUS "GEOS: Archives output: ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
-include_directories(BEFORE third_party/protobuf)
-add_subdirectory(third_party/protobuf)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 #-----------------------------------------------------------------------------
 # C++ language version and compilation flags
