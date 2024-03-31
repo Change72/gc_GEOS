@@ -74,8 +74,8 @@ public:
         , maxy(DoubleNotANumber)
         , minz(DoubleNotANumber)
         , maxz(DoubleNotANumber)
-        , start_(-1)
-        , end_(-1)
+        , start_(0)
+        , end_(0)
         {};
 
     /** \brief
@@ -88,7 +88,7 @@ public:
      * @param  z1  the first y-value
      * @param  z2  the second y-value
      */
-    Envelope3d(double x1, double x2, double y1, double y2, double z1, double z2, int start = -1, int end = -1, std::string bloom_filter = "")
+    Envelope3d(double x1, double x2, double y1, double y2, double z1, double z2, size_t start = 0, size_t end = 0, std::string bloom_filter = "")
     {
         init(x1, x2, y1, y2, z1, z2, start, end, std::move(bloom_filter));
     }
@@ -208,7 +208,7 @@ public:
      * @param  z1  the first y-value
      * @param  z2  the second y-value
      */
-    void init(double x1, double x2, double y1, double y2, double z1, double z2, int start = -1, int end = -1, std::string bloom_filter = "")
+    void init(double x1, double x2, double y1, double y2, double z1, double z2, size_t start = -1, size_t end = -1, std::string bloom_filter = "")
     {
         if(x1 < x2) {
             minx = x1;
@@ -268,8 +268,8 @@ public:
     void setToNull()
     {
         minx = maxx = miny = maxy = minz = maxz = DoubleNotANumber;
-        start_ = -1;
-        end_ = -1;
+        start_ = 0;
+        end_ = 0;
         bloom_filter_ = "";
     };
 
@@ -283,7 +283,7 @@ public:
     {
         return std::isnan(maxx) && std::isnan(maxy) && std::isnan(maxz) &&
                std::isnan(minx) && std::isnan(miny) && std::isnan(minz) &&
-               start_ == -1 && end_ == -1 && bloom_filter_.empty();
+               start_ == 0 && end_ == 0 && bloom_filter_.empty();
     };
 
     /** \brief
@@ -971,25 +971,25 @@ public:
     operator< (const Envelope3d& a, const Envelope3d& b);
 
     // get the start_
-    int getStart() const
+    size_t getStart() const
     {
         return start_;
     }
 
     // set the start_
-    void setStart(int start)
+    void setStart(size_t start)
     {
         start_ = start;
     }
 
     // get the end_
-    int getEnd() const
+    size_t getEnd() const
     {
         return end_;
     }
 
     // set the end_
-    void setEnd(int end)
+    void setEnd(size_t end)
     {
         end_ = end;
     }
@@ -1057,10 +1057,10 @@ private:
     double maxz;
 
     /// the start
-    int start_;
+    size_t start_;
 
     /// the end
-    int end_;
+    size_t end_;
 
     /// bloom filter
     std::string bloom_filter_;
